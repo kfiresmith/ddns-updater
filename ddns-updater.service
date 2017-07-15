@@ -1,0 +1,11 @@
+[Unit]
+Description=Dynamic DNS Update Agent (ddns-updater)
+After=syslog.target network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ddns-updater.py
+
+
+[Install]
+WantedBy=multi-user.target
