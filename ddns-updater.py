@@ -2,9 +2,11 @@
 
 import configparser
 import os
+import re
 import socket
 import sys
 import urllib.request
+
 
 config = configparser.ConfigParser()
 configfile = "ddns-updater.conf"
@@ -20,20 +22,22 @@ def load_config():
     config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)),
                 'etc', 'dnsdynamic-updater', configfile))
 
+
 def load_fake_config():
     # Read config file
     config.read(configfile)
 
+
 def read_config():
     # Parse variables from config file
+    global provider
+    global dyn_account
+    global dyn_hostname
+    global dyn_passwd
     try:
-        global provider
         provider= config['main']['provider']
-        global dyn_account
         dyn_account = config[provider]['dyn_account']
-        global dyn_passwd
         dyn_passwd = config[provider]['dyn_passwd']
-        global dyn_hostname
         dyn_hostname = config[provider]['dyn_hostname']
     except NameError as ne:
         print(ne)
@@ -46,6 +50,17 @@ def read_config():
     return dyn_account, dyn_passwd, dyn_hostname
 
 
+def is_valid_hostname(hostname):
+    # https://stackoverflow.com/questions/2532053/validate-a-hostname-string/2532344#2532344
+    # Credit: Tim Pietzcker (Thanks for doing the regex so I don't have to)
+    if len(hostname) > 255:
+        return False
+    if hostname[-1] == ".":
+        hostname = hostname[:-1] # strip exactly one dot from the right, if present
+    allowed = re.compile("(?!-)[A-Z\d-]{1,63}(?<!-)$", re.IGNORECASE)
+    return all(allowed.match(x) for x in hostname.split("."))
+
+
 def fresh_data(dyn_hostname):
     # Grab current DNS record
     try:
@@ -54,27 +69,25 @@ def fresh_data(dyn_hostname):
         print("Problem doing lookup of current hostname record for {}".format(dyn_hostname))
         print(ge)
         sys.exit(3)
-
     # Grab current IP
     ip_source = "https://api.ipify.org"
     myip = urllib.request.urlopen(ip_source).read().decode("utf-8")
-
-    #Return results
     return current_record, myip
 
+
 def google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip):
-    update_string = ["https://{}:{}@domains.google.com/nic/update?hostname={}&myip={}"
-                         .format(dyn_account, dyn_passwd, dyn_hostname, myip)]
+    update_string = "https://{}:{}@domains.google.com/nic/update?hostname={}&myip={}" \
+                         .format(dyn_account, dyn_passwd, dyn_hostname, myip)
     return update_string
-
-
 
 
 load_fake_config()
 read_config()
+if is_valid_hostname(dyn_hostname):
+    (current_record, myip) = fresh_data(dyn_hostname)
 
 
-(current_record, myip) = fresh_data(dyn_hostname)
 if (current_record != myip):
+    #urllib.request.urlopen(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
     print(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
 
