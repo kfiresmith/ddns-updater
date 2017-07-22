@@ -3,9 +3,9 @@
 import configparser
 import os
 import re
+import requests
 import socket
 import sys
-import urllib.request
 
 
 config = configparser.ConfigParser()
@@ -71,7 +71,8 @@ def fresh_data(dyn_hostname):
         sys.exit(3)
     # Grab current IP
     ip_source = "https://api.ipify.org"
-    myip = urllib.request.urlopen(ip_source).read().decode("utf-8")
+    #myip = urllib.request.urlopen(ip_source).read().decode("utf-8")
+    myip = requests.get(ip_source).text
     return current_record, myip
 
 
