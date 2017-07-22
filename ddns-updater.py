@@ -24,7 +24,8 @@ def load_config():
 
 
 def load_fake_config():
-    # Read config file
+    # Read a non-git config for in-place testing w/ creds
+    configfile = "ddns-updater-local.conf"
     config.read(configfile)
 
 
@@ -71,7 +72,6 @@ def fresh_data(dyn_hostname):
         sys.exit(3)
     # Grab current IP
     ip_source = "https://api.ipify.org"
-    #myip = urllib.request.urlopen(ip_source).read().decode("utf-8")
     myip = requests.get(ip_source).text
     return current_record, myip
 
@@ -89,6 +89,9 @@ if is_valid_hostname(dyn_hostname):
 
 
 if (current_record != myip):
-    #urllib.request.urlopen(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
-    print(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
+    if provider == 'google':
+        requests.get(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
+        # TODO: use response for $logic and logging
+        # put logging in place
+
 
