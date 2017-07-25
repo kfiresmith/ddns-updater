@@ -6,6 +6,7 @@ import re
 import requests
 import socket
 import sys
+import syslog
 
 
 config = configparser.ConfigParser()
@@ -16,6 +17,7 @@ def load_config():
     conf_abs_path = "/etc/dnsdynamic-updater/{}".format(configfile)
     if os.path.exists(conf_abs_path) is False:
         print("{} file appears to be missing.".format(configfile))
+        syslog("Fatal: Configuration file not found! Exiting {}".format(__file__))
         sys.exit(2)
     # Read config file
     os.chdir("/")
@@ -36,7 +38,7 @@ def read_config():
     global dyn_hostname
     global dyn_passwd
     try:
-        provider= config['main']['provider']
+        provider = config['main']['provider']
         dyn_account = config[provider]['dyn_account']
         dyn_passwd = config[provider]['dyn_passwd']
         dyn_hostname = config[provider]['dyn_hostname']
