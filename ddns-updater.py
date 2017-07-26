@@ -8,16 +8,18 @@ import socket
 import sys
 import syslog
 
+syslog.syslog("Starting up")
 
 config = configparser.ConfigParser()
 configfile = "ddns-updater.conf"
+
 
 def load_config():
     # Verify config file exists
     conf_abs_path = "/etc/dnsdynamic-updater/{}".format(configfile)
     if os.path.exists(conf_abs_path) is False:
         print("{} file appears to be missing.".format(configfile))
-        syslog("Fatal: Configuration file not found! Exiting {}".format(__file__))
+        syslog.syslog("Fatal: Configuration file not found! Exiting")
         sys.exit(2)
     # Read config file
     os.chdir("/")
@@ -43,12 +45,14 @@ def read_config():
         dyn_passwd = config[provider]['dyn_passwd']
         dyn_hostname = config[provider]['dyn_hostname']
     except NameError as ne:
-        print(ne)
-        print("The configuration file exists but appears to be missing a section")
+        errmsg = "Fatal: The configuration file exists but appears to be missing a section"
+        print("{}: {}".format(errmsg, ne))
+        syslog.syslog("{}: {}".format(errmsg, ne))
         sys.exit(2)
     except KeyError as ke:
-        print(ke)
-        print("The configuration file exists but appears to be missing values")
+        errmsg = "Fatal: The configuration file exists but appears to be missing values"
+        print("{}: {}".format(errmsg, ke))
+        syslog.syslog("{}: {}".format(errmsg, ke))
         sys.exit(2)
     return dyn_account, dyn_passwd, dyn_hostname
 
@@ -69,8 +73,9 @@ def fresh_data(dyn_hostname):
     try:
         current_record = socket.gethostbyname(dyn_hostname)
     except socket.gaierror as ge:
-        print("Problem doing lookup of current hostname record for {}".format(dyn_hostname))
-        print(ge)
+        errmsg = "Problem doing lookup of current hostname record for {}".format(dyn_hostname)
+        print("{}: {}".format(errmsg, ge))
+        syslog.syslog("{}: {}".format(errmsg, ge))
         sys.exit(3)
     # Grab current IP
     ip_source = "https://api.ipify.org"
