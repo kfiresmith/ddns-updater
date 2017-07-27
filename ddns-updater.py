@@ -7,16 +7,25 @@ import requests
 import socket
 import sys
 import syslog
+import time
 
-syslog.syslog("Starting up")
 
-config = configparser.ConfigParser()
+progname = 'ddns-updater'
 configfile = "ddns-updater.conf"
+config = configparser.ConfigParser()
+
+# This will eventually be done via a command switch...
+verbose = True
 
 
-def load_config():
+if verbose:
+    syslog.syslog("Starting up")
+    print("Starting up {}".format(progname))
+
+
+def read_config():
     # Verify config file exists
-    conf_abs_path = "/etc/dnsdynamic-updater/{}".format(configfile)
+    conf_abs_path = "/etc/ddns-updater/{}".format(configfile)
     if os.path.exists(conf_abs_path) is False:
         print("{} file appears to be missing.".format(configfile))
         syslog.syslog("Fatal: Configuration file not found! Exiting")
@@ -24,21 +33,24 @@ def load_config():
     # Read config file
     os.chdir("/")
     config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                'etc', 'dnsdynamic-updater', configfile))
+                'etc', 'ddns-updater', configfile))
 
 
-def load_fake_config():
+def read_fake_config():
     # Read a non-git config for in-place testing w/ creds
     configfile = "ddns-updater-local.conf"
     config.read(configfile)
 
 
-def read_config():
+def parse_config():
     # Parse variables from config file
     global provider
     global dyn_account
     global dyn_hostname
     global dyn_passwd
+    syslog.syslog("reading {}".format(configfile))
+    if verbose:
+        print("reading {}".format(configfile))
     try:
         provider = config['main']['provider']
         dyn_account = config[provider]['dyn_account']
@@ -89,16 +101,22 @@ def google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip):
     return update_string
 
 
-load_fake_config()
-read_config()
-if is_valid_hostname(dyn_hostname):
-    (current_record, myip) = fresh_data(dyn_hostname)
-
-
-if (current_record != myip):
-    if provider == 'google':
-        requests.get(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
-        # TODO: use response for $logic and logging
-        # put logging in place
+read_fake_config()
+parse_config()
+while is_valid_hostname(dyn_hostname):
+    try:
+        (current_record, myip) = fresh_data(dyn_hostname)
+        if (current_record != myip):
+            if provider == 'google':
+                update_job = requests.get(google_dns_update(dyn_account, dyn_passwd, dyn_hostname, myip))
+                type(update_job)
+                print(update_job)
+                # TODO: use response for $logic and logging
+                # put logging in place
+        time.sleep(5)
+    except KeyboardInterrupt as ki:
+        syslog.syslog("termination requested; shutting down")
+        print("termination requested; shutting down")
+        sys.exit(0)
 
 
